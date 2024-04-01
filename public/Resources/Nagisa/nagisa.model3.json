@@ -1,0 +1,49 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "nagisa.moc3",
+		"Textures": [
+			"nagisa.1024/texture_00.png"
+		],
+		"Physics": "nagisa.physics3.json",
+		"DisplayInfo": "nagisa.cdi3.json",
+		"Motions": {
+			"standby": [{
+				"Name": "standby",
+				"File": "standby.motion3.json",
+				"Sound": ""
+			}],
+			"speak": [{
+				"Name": "speak",
+				"File": "speak.motion3.json",
+				"Sound": ""
+			}]
+		},
+		"Expressions": [
+			{
+				"Name": "expression1",
+				"File": "motions/expression1.exp3.json"
+			},
+			{
+				"Name": "expression2",
+				"File": "motions/expression2.exp3.json"
+			},
+			{
+				"Name": "expression3",
+				"File": "motions/expression3.exp3.json"
+			},
+			{
+				"Name": "expression4",
+				"File": "motions/expression4.exp3.json"
+			}
+		]
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": []
+		}
+	],
+	"HitAreas": []
+}
