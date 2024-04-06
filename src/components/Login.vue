@@ -1,5 +1,5 @@
 <template>
-  <div class="login-box">
+  <div class="login-box" ref="teleportTarget">
     <var-space align="center" justify="center" direction="column" size="large">
       <var-image
           width="100px"
@@ -13,7 +13,7 @@
           size="normal"
           placeholder="账号"
           variant="outlined"
-          :rules="[(v) => v.length > 6 || '文本长度必须大于6']"
+          :rules="[(v) => v.length >= 6 || '文本长度必须大于6']"
           v-model="username"
       />
       <var-input
@@ -22,47 +22,60 @@
           placeholder="密码"
           variant="outlined"
           type="password"
-          :rules="[(v) => v.length > 6 || '文本长度必须大于6']"
+          :rules="[(v) => v.length >= 6 || '文本长度必须大于6']"
           v-model="password"
       />
     </var-space>
-    <var-button @click="login" size="normal" style="width: 10%; margin-top: 30px">登录</var-button>
+    <var-button @click="login" size="normal" style="width: 15%; margin-top: 30px; background-color: RGB(254,221,222)">登录</var-button>
   </div>
 </template>
 
 <script>
 import {inject, ref} from 'vue'
-import axios from 'axios';
+import {get, post} from '@/api/user'
+import {Snackbar} from "@varlet/ui";
 
 export default {
   name: "Login",
   setup(_, {emit}) {
+    const teleportTarget = ref(null);
     const username = ref('')
     const password = ref('')
     const loggedIn = inject('loggedIn', ref(false));
 
-    async function makePostRequest() {
-      try {
-        const result = await axios.post('https://your-api-url.com', {
-          data: {username: username, password: password} // 这里是你要发送的数据
-        });
-        if(result.data.code === 200){
-          loggedIn.value = true;
-        }
-      } catch (error) {
-        console.error(error);
+    function createSnackbar(type,msg,tele) {
+      Snackbar[type](msg,{teleport: tele})
+      console.log(teleportTarget.value)
+      if (type === 'loading') {
+        setTimeout(() => {
+          Snackbar.success("加载成功")
+        }, 2000)
       }
     }
 
     function login() {
-      // 登录逻辑，假设成功后更新 loggedIn 状态
-      loggedIn.value = true;
       // 发送post登录请求
-      makePostRequest();
+      const postData = {
+        username: username.value,
+        password: password.value
+      };
+      post("/login",postData)
+          .then(response=>{
+            if (response.data.code===200){
+              loggedIn.value=true;
+              localStorage.setItem("token",response.data.data.token)
+              localStorage.setItem("userInfo", JSON.stringify(response.data.data.userInfo))
+              createSnackbar("success","登录成功",teleportTarget.value);
+              emit('login-success');
+            }else{
+              createSnackbar("warning",response.data.msg,teleportTarget.value);
+            }
+
+          })
+          .catch(error=>{
+            console.error(error);
+          })
       // 触发登录成功事件
-      if (loggedIn.value === true){
-        emit('login-success');
-      }
     }
 
     return {
@@ -70,6 +83,7 @@ export default {
       login,
       username,
       password,
+      teleportTarget
     };
   }
 }
@@ -78,7 +92,7 @@ export default {
 <style scoped lang="less">
 .login-box {
   width: 100%;
-  height: 100%;
+  height: 88.5%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -86,6 +100,6 @@ export default {
 }
 
 .var-input-div {
-  width: 350px;
+  width: 300px;
 }
 </style>
