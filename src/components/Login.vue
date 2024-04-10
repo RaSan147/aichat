@@ -1,6 +1,6 @@
 <template>
   <div class="login-box" ref="teleportTarget">
-    <var-space align="center" justify="center" direction="column" size="large">
+    <var-space align="center" justify="center" direction="column" size="large" style="display: flex;justify-content: center;align-items: center">
       <var-image
           width="100px"
           height="100px"
@@ -100,6 +100,6 @@ export default {
 }
 
 .var-input-div {
-  width: 300px;
+  width: calc(100%);
 }
 </style>

@@ -1,10 +1,14 @@
 <script>
 import Login from '@/components/Login';
-import {onMounted, ref} from 'vue'
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 import {register} from 'vue-advanced-chat'
 import '../css/iphone.css'
-import {get, post} from '@/api/user'
-
+import {post} from '@/api/user'
+import {addRoom, getAllRooms} from '@/api/room'
+import {Snackbar} from "@varlet/ui";
+import {selectRoomHistoryChat, chat} from '@/api/chat'
+import {useStore} from 'vuex'
+import store from "@/store";
 register()
 export default {
   components: {
@@ -14,29 +18,13 @@ export default {
     return {
       loggedIn: ref(false),
       messagesLoaded: false,
-      currentUserId: '1234',
-      rooms: [{
-        roomId: '1',
-        roomName: 'Nagisa',
-        avatar: 'nagisa.png',
-        unreadCount: 0,
-        index: 3,
-        lastMessage: [],
-        users: [
-          {
-            _id: '1234',
-            username: 'Me',
-            avatar: '粉色团子.png'
-          },
-          {
-            _id: '4321',
-            username: 'Nagisa',
-            avatar: 'nagisa.png'
-          }
-        ],
-        typingUsers: [4321]
-      }],
-      messages: []
+      currentUserId: "1",
+      rooms: [],
+      messages: [],
+      pageNum: 1,
+      maxPageNum: null,
+      roomNum: null,
+      isGenerationAudio: true
     }
   },
   mounted() {
@@ -50,21 +38,88 @@ export default {
     }
     post("/tokenIsEffective", null, header).then(response => {
       this.loggedIn = response.data.data
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (response.data.data) {
+        const pageInfo = {
+          page: 1,
+          limit: 10
+        }
+        getAllRooms(pageInfo, token).then(response => {
+          if (response.data.code === 200) {
+            response.data.data.records.forEach((item, index) => {
+              this.rooms.push({
+                roomId: item.roomId,
+                roomName: item.firstChat,
+                avatar: 'nagisa.png',
+                unreadCount: 0,
+                lastMessage: {
+                  _id: 1,
+                  content: item.lastChat,
+                  senderId: "0",
+                  username: 'Nagisa',
+                  timestamp: '10:20'
+                },
+                users: [
+                  {
+                    _id: "1",
+                    username: userInfo.username,
+                    avatar: '粉色团子.png'
+                  },
+                  {
+                    _id: "0",
+                    username: 'Nagisa',
+                    avatar: 'nagisa.png'
+                  }
+                ]
+              })
+            });
+          } else {
+            this.createSnackbar("warning", response.data.error);
+          }
+        })
+      }
     })
+
   },
   methods: {
     handleLoginSuccess() {
       this.loggedIn = true;
+      this.fetchRooms()
     },
+    handleRoomChange(obj) {
+    },
+    addRoom() {
+      addRoom(null, localStorage.getItem("token")).then(response => {
+        if (response.data.code === 200) {
+          this.createSnackbar("success", response.data.message);
+        } else {
+          this.createSnackbar("warning", response.data.error);
+        }
+      })
+    },
+    createSnackbar(type, msg) {
+      Snackbar[type](msg)
+      if (type === 'loading') {
+        setTimeout(() => {
+          Snackbar.success("加载成功")
+        }, 2000)
+      }
+    },
+
+    getTotalPageNum(totalRecord, pageSize) {
+      let pageNum;
+      return pageNum = parseInt((totalRecord + pageSize - 1) / pageSize);
+    },
+
     sendMessage(message) {
-      console.log(message)
-      this.messages.push(
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const messages = this.messages;
+      messages.push(
           {
             _id: message.detail[0].roomId,
-            indexId: 12092,
             content: message.detail[0].content,
-            senderId: '1234',
-            username: 'Me',
+            senderId: "1",
+            username: userInfo.username,
             avatar: '粉色团子.png',
             timestamp: new Date().toString().substring(16, 21),
             date: new Date().toDateString(),
@@ -73,57 +128,206 @@ export default {
             distributed: true,
             seen: true,
             deleted: false,
-            failure: false,
             disableActions: false,
-            disableReactions: false,
-          },
-          {
-            _id: message.detail[0].roomId,
-            indexId: 12092,
-            content: message.detail[0].content,
-            senderId: '4321',
-            username: 'Nagisa',
-            avatar: 'nagisa.png',
-            timestamp: new Date().toString().substring(16, 21),
-            date: new Date().toDateString(),
-            saved: true,
-            distributed: true,
-            seen: true
+            disableReactions: true,
           }
       )
-    },
-    fetchMessages({room, options}) {
-      this.messagesLoaded = true;
-      {
-        room, options
+      this.messages = messages;
+      const chatData = {
+        dialogueMe: message.detail[0].content,
+        chatType: 0,
+        roomId: message.detail[0].roomId,
+        isGenerationAudio: this.isGenerationAudio
       }
+      chat(chatData, localStorage.getItem("token"))
+          .then(response=>{
+            messages.push({
+              _id: message.detail[0].roomId,
+              content: response.data.data.dialogueAi,
+              senderId: "0",
+              username: "Nagisa",
+              avatar: 'nagisa.png',
+              timestamp: new Date().toString().substring(16, 21),
+              date: new Date().toDateString(),
+              system: false,
+              saved: true,
+              distributed: true,
+              seen: true,
+              deleted: false,
+              disableActions: false,
+              disableReactions: true,
+            })
+            store.commit("setAuditData", response.data.data.audioData);
+          })
+      this.messages = messages;
+    },
+    fetchRooms() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"))
+      const pageInfo = {
+        page: 1,
+        limit: 10
+      };
+
+      getAllRooms(pageInfo, token).then(response => {
+        if (response.data.code === 200) {
+          this.rooms = []; // 清空原有的房间列表
+          response.data.data.records.forEach((item, index) => {
+            this.rooms.push({
+              roomId: item.roomId,
+              roomName: item.firstChat,
+              avatar: 'nagisa.png',
+              unreadCount: 0,
+              lastMessage: {
+                _id: 1,
+                content: item.lastChat,
+                senderId: "0",
+                username: 'Nagisa',
+                timestamp: '10:20'
+              },
+              users: [
+                {
+                  _id: "1",
+                  username: userInfo.username,
+                  avatar: '粉色团子.png'
+                },
+                {
+                  _id: "0",
+                  username: 'Nagisa',
+                  avatar: 'nagisa.png'
+                }
+              ]
+            })
+          });
+        } else {
+          this.createSnackbar("warning", response.data.error);
+        }
+      });
+    },
+    fetchMessages(obj) {
+      this.messagesLoaded = false;
+      const room = obj.detail[0].room;
+      this.messages = []; // 清空当前房间的消息列表
+      // 添加房间标识符作为异步操作的标识符
+      const roomId = room.roomId;
+      if (this.roomNum == null || this.roomNum !== roomId) {
+        this.messages = [];
+      }
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"))
+      const data = {
+        roomId: room.roomId,
+        type:0
+      }
+      selectRoomHistoryChat(data, localStorage.getItem("token")).then(response => {
+        this.maxPageNum = this.getTotalPageNum(response.data.data.total, response.data.data.size);
+        const list = response.data.data.reverse();
+        list.forEach((item, index) => {
+          // 使用 chatDate 和 chatTimestamp 创建 Date 对象
+          const myDateObject = new Date(item[1].chatDate[0], item[1].chatDate[1] - 1, item[1].chatDate[2],
+              item[1].chatTimestamp[0], item[1].chatTimestamp[1], item[1].chatTimestamp[2]);
+
+          const aiDateObject = new Date(item[0].chatDate[0], item[0].chatDate[1] - 1, item[0].chatDate[2],
+              item[0].chatTimestamp[0], item[0].chatTimestamp[1], item[0].chatTimestamp[2]);
+          // 将 Date 对象转换为 timestamp 字符串（HH:mm 格式）
+          const myTimestamp = myDateObject.toLocaleTimeString('zh-CN', {hour12: false}).substring(0, 5);
+          const aiTimestamp = aiDateObject.toLocaleTimeString('zh-CN', {hour12: false}).substring(0, 5);
+
+          // 将 Date 对象转换为 date 字符串（完整日期格式）
+          const myDate = myDateObject.toDateString();
+          const aiDate = aiDateObject.toDateString();
+          const messages = this.messages;
+          messages.push(
+              {
+                _id: room.roomId,
+                content: item[1].dialogueMe,
+                senderId: "1",
+                username: userInfo.username,
+                avatar: '粉色团子.png',
+                timestamp: myTimestamp,
+                date: myDate,
+                system: false,
+                saved: true,
+                distributed: true,
+                seen: true,
+                deleted: false,
+                disableActions: false,
+                disableReactions: true,
+              },
+              {
+                _id: room.roomId,
+                content: item[0].dialogueAi,
+                senderId: "0",
+                username: "Nagisa",
+                avatar: 'nagisa.png',
+                timestamp: aiTimestamp,
+                date: aiDate,
+                system: false,
+                saved: true,
+                distributed: true,
+                seen: true,
+                deleted: false,
+                disableActions: false,
+                disableReactions: true,
+              }
+          )
+          this.messages = messages;
+        })
+        this.messagesLoaded = true;
+      })
+
     }
   },
   setup() {
     const active = ref(0);
+    const chatWrapperRef = ref(null)
     const roomsListOpened = ref(false); // 默认值为true，平板状态下默认打开
     const responsiveChange = () => {
       const mediaQuery = window.matchMedia("(max-width: 1440px)");
       const appQuery = window.matchMedia("(min-width: 840px)");
-      if (mediaQuery.matches && appQuery.matches) {
+      // 当视窗宽度低于1440并且高于840时，打开左侧房间列表
+      if (!(mediaQuery.matches && appQuery.matches)) {
         roomsListOpened.value = false;
-      }else{
+      } else {
         roomsListOpened.value = true;
       }
     };
 
-    onMounted(() => {
-      responsiveChange(); // 初始化检查一次
-      window.addEventListener('resize', responsiveChange); // 监听窗口大小变化
+    // 监听窗口大小变化
+    const resizeHandler = () => {
+      const chatWrapper = chatWrapperRef.value;
+      if (!chatWrapper) return; // 确保 chatWrapperRef 有值
+
+      if (window.innerWidth < 838) {
+        chatWrapper.style.height = 'calc(100% - 100px)';
+      } else {
+        chatWrapper.style.height = ''; // 移除行内样式
+      }
+    };
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('resize', responsiveChange);
+      window.removeEventListener('resize', resizeHandler);
     });
+
+    onMounted(() => {
+      window.addEventListener('resize', responsiveChange); // 监听窗口大小变化
+      window.addEventListener('resize', resizeHandler);
+
+      // 初始化时调用一次以确保高度正确
+      resizeHandler();
+      responsiveChange(); // 初始化检查一次
+    });
+
     return {
-      active, roomsListOpened
+      active, roomsListOpened, chatWrapperRef
     }
   }
 }
 </script>
 <template>
   <div class="chat-box">
+    <!--  app样式  -->
     <div class="phone-app">
       <var-app-bar
           :safe-area-top="true"
@@ -131,7 +335,6 @@ export default {
           image="粉色背景.jpg"
           image-linear-gradient="to left top, rgba(227,203,222, 0.5) 0%, rgba(254,221,222, 0.9) 100%"
           class="phone-bar"
-
       >
         <template #left>
           <div
@@ -155,25 +358,30 @@ export default {
           </var-tabs>
         </template>
       </var-app-bar>
-      <div class="chat-wrapper" v-if="loggedIn">
+      <div class="chat-wrapper" v-if="loggedIn" ref="chatWrapperRef">
         <vue-advanced-chat
             style="height: 100%"
-            :rooms-list-opened="!roomsListOpened"
-            :responsive-breakpoint="841"
+            :load-first-room=false
             :current-user-id="currentUserId"
             :rooms="JSON.stringify(rooms)"
             :messages="JSON.stringify(messages)"
-            :room-actions="JSON.stringify(roomActions)"
             :rooms-loaded=true
-            :loading-rooms=true
+            :loading-rooms=false
             :messages-loaded="messagesLoaded"
             @fetch-messages="fetchMessages"
             @send-message="sendMessage"
+            @add-room="addRoom"
+            :emojis-suggestion-enabled=false
             v-if="loggedIn"
-        />
+        >
+          <div slot="room-header-info" class="chat-header">
+            <p>Nagisa</p>
+          </div>
+        </vue-advanced-chat>
       </div>
       <Login v-if="!loggedIn" @login-success="handleLoginSuccess"></Login>
     </div>
+    <!--  平板以及手机样式  -->
     <div class="device iphone-x">
       <!--    外部轮廓    -->
       <div class="frame">
@@ -214,19 +422,24 @@ export default {
           <div class="chat-wrapper" v-if="loggedIn">
             <vue-advanced-chat
                 style="height: 100%"
-                :rooms-list-opened="!roomsListOpened"
-                :responsive-breakpoint="841"
+                :load-first-room=true
                 :current-user-id="currentUserId"
                 :rooms="JSON.stringify(rooms)"
                 :messages="JSON.stringify(messages)"
-                :room-actions="JSON.stringify(roomActions)"
                 :rooms-loaded=true
                 :loading-rooms=false
                 :messages-loaded="messagesLoaded"
                 @fetch-messages="fetchMessages"
                 @send-message="sendMessage"
+                @add-room="addRoom"
+                :emojis-suggestion-enabled=false
                 v-if="loggedIn"
-            />
+            >
+              <div slot="room-header-info" class="chat-header">
+
+                <p>Nagisa</p>
+              </div>
+            </vue-advanced-chat>
           </div>
           <Login v-if="!loggedIn" @login-success="handleLoginSuccess"></Login>
         </div>
@@ -260,13 +473,13 @@ export default {
   border-top-right-radius: 32px;
 }
 
+
 .chat-box {
   height: 100%;
-  width: 60%;
+  width: 65%;
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: flex-direction 0.5s ease;
 }
 
 .chat-wrapper {
@@ -275,7 +488,6 @@ export default {
   height: calc(100% - 100px);
   border-bottom-right-radius: 32px;
   border-bottom-left-radius: 32px;
-
   @media screen and (max-width: 1440px) {
     height: calc(100% - 106px);
   }
@@ -300,15 +512,11 @@ export default {
   @media screen and (max-width: 856px) {
     height: calc(100% - 178px);
   }
-  @media screen and (min-width: 841px) {
-    height: calc(100% - 200px);
-  }
 }
 
 @media screen and (max-width: 1440px) {
   .chat-box {
     width: 100%;
-
   }
 
   .phone-bar {
@@ -332,5 +540,12 @@ export default {
 .phone-app {
   width: 100%;
   height: 100%;
+}
+
+.chat-header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>

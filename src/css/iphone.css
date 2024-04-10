@@ -16,7 +16,7 @@
 
 .iphone-x {
     height: 900px;
-    width: 445px;
+    width: 1050px;
 }
 
 .iphone-x .frame {
@@ -25,7 +25,7 @@
     box-shadow: inset 0 0 0 2px #606467, inset 0 0 0 6px #e2e3e4;
     height: 900px;
     padding: 22px;
-    width: 445px;
+    width: 1050px;
 }
 
 .iphone-x .content {
@@ -35,7 +35,7 @@
     border-radius: 32px;
     height: 856px;
     position: relative;
-    width: 403px;
+    width: 1007px;
 }
 
 .iphone-x .stripe::after,
@@ -59,16 +59,7 @@
 }
 
 .iphone-x .header {
-    background: #222;
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
-    height: 24px;
-    left: 50%;
-    margin-left: -82px;
-    position: absolute;
-    top: 22px;
-    width: 164px;
-    z-index: 199;
+    display: none;
 }
 
 .iphone-x .header::after,
@@ -182,8 +173,5 @@
     }
     .iphone-x .header {
         display: none;
-    }
-    .iphone-x .content{
-
     }
 }

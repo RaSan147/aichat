@@ -8,9 +8,10 @@
 <script>
 import PhoneChat from "@/components/PhoneChat";
 import Live2d from "@/components/Live2d";
+
 export default {
   name: "AllScreen",
-  components:{
+  components: {
     Live2d,
     PhoneChat
   }
@@ -18,7 +19,7 @@ export default {
 </script>
 
 <style scoped>
-.AllScreen{
+.AllScreen {
   height: 100%;
   width: 100%;
   display: flex;
@@ -30,7 +31,8 @@ export default {
   .AllScreen {
     flex-direction: column; /* 在平板宽度下，垂直布局 */
   }
-  #live-div{
+
+  #live-div {
     display: none;
   }
 }
@@ -40,7 +42,8 @@ export default {
   .AllScreen {
     flex-direction: column; /* 在移动端，垂直布局 */
   }
-  #live-div{
+
+  #live-div {
     display: none;
   }
 }
