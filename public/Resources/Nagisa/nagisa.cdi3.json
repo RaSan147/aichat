@@ -92,6 +92,11 @@
 			"Name": "嘴　变形"
 		},
 		{
+			"Id": "Param",
+			"GroupId": "",
+			"Name": "嘴 变形"
+		},
+		{
 			"Id": "ParamMouthOpenY",
 			"GroupId": "",
 			"Name": "嘴　张开和闭合"
@@ -137,7 +142,13 @@
 			"Name": "摇动 后发"
 		}
 	],
-	"ParameterGroups": [],
+	"ParameterGroups": [
+		{
+			"Id": "ParamGroup",
+			"GroupId": "",
+			"Name": "嘴"
+		}
+	],
 	"Parts": [
 		{
 			"Id": "Part",
@@ -203,5 +214,11 @@
 			"Id": "Part6",
 			"Name": "右瞳孔"
 		}
+	],
+	"CombinedParameters": [
+		[
+			"Param",
+			"ParamMouthOpenY"
+		]
 	]
 }

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+</head>
+
+<body>
+<script>
+    if (!(typeof process === "object")) {
+        window.process = {
+            env: {
+                NODE_ENV: 'development'
+            }
+
+        };
+    }
+</script>
+<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js"></script>
+<script src="https://pixijs.download/v7.4.0/pixi.min.js"></script>
+
+<!-- <script src="./dist/index.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/index.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/gh/RaSan147/pixi-live2d-display@v0.4.0-ls-3/dist/index.min.js"></script>
+
+
+<canvas id="canvas" class="character" style="height: 100vh;width: 100vw;"></canvas>
+
+<script>
+    window.PIXI = PIXI;
+
+    var model_proxy = null;
+
+    (async function () {
+        const app = new PIXI.Application({
+            view: document.getElementById('canvas'),
+        });
+
+        const model = await PIXI.live2d.Live2DModel.from(
+            "./public/Resources/Nagisa/nagisa.model3.json"
+        );
+        model_proxy = model;
+        app.stage.addChild(model);
+
+        // transforms
+        model.x = 200;
+        model.y = 200;
+        model.scale.set(.3, .3);
+
+
+        var audio_link = "./public/response.wav" //[Optional arg, can be null or empty] [relative or full url path] [mp3 or wav file]
+        var volume = 1; //[Optional arg, can be null or empty] [0.0 - 1.0]
+        var expression = 4; //[Optional arg, can be null or empty] [index|name of expression]
+        var resetExpression = true; //[Optional arg, can be null or empty] [true|false] [default: true] [if true, expression will be reset to default after animation is over]
+        var cors = "Anonymous" //[Optional arg, can be null or empty] [default: "Anonymous"] [if you want to use cors, set it to "use-cors"]
+
+        window.document.body.oncontextmenu = () => {
+            model.speak(audio_link, {
+                volume: volume,
+                expression: expression,
+                resetExpression: resetExpression,
+                crossOrigin: cors
+            })
+        }
+    })();
+</script>
+</body>
+</html>

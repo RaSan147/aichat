@@ -1,49 +1,72 @@
 {
-	"Version": 3,
-	"FileReferences": {
-		"Moc": "nagisa.moc3",
-		"Textures": [
-			"nagisa.1024/texture_00.png"
-		],
-		"Physics": "nagisa.physics3.json",
-		"DisplayInfo": "nagisa.cdi3.json",
-		"Motions": {
-			"standby": [{
-				"Name": "standby",
-				"File": "standby.motion3.json",
-				"Sound": ""
-			}],
-			"speak": [{
-				"Name": "speak",
-				"File": "speak.motion3.json",
-				"Sound": ""
-			}]
-		},
-		"Expressions": [
-			{
-				"Name": "expression1",
-				"File": "motions/expression1.exp3.json"
-			},
-			{
-				"Name": "expression2",
-				"File": "motions/expression2.exp3.json"
-			},
-			{
-				"Name": "expression3",
-				"File": "motions/expression3.exp3.json"
-			},
-			{
-				"Name": "expression4",
-				"File": "motions/expression4.exp3.json"
-			}
-		]
-	},
-	"Groups": [
-		{
-			"Target": "Parameter",
-			"Name": "EyeBlink",
-			"Ids": []
-		}
-	],
-	"HitAreas": []
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "nagisa.moc3",
+    "Textures": [
+      "nagisa.1024/texture_00.png"
+    ],
+    "Physics": "nagisa.physics3.json",
+    "DisplayInfo": "nagisa.cdi3.json",
+    "Expressions": [
+      {
+        "Name": "smile",
+        "File": "expressions/smile.exp3.json"
+      },
+      {
+        "Name": "speak",
+        "File": "expressions/speak.exp3.json"
+      },
+      {
+        "Name": "standby",
+        "File": "expressions/standby.exp3.json"
+      },
+      {
+        "Name": "expression1.exp3.json",
+        "File": "motions/expression1.exp3.json"
+      },
+      {
+        "Name": "expression2.exp3.json",
+        "File": "motions/expression2.exp3.json"
+      },
+      {
+        "Name": "expression3.exp3.json",
+        "File": "motions/expression3.exp3.json"
+      },
+      {
+        "Name": "expression4.exp3.json",
+        "File": "motions/expression4.exp3.json"
+      }
+    ],
+    "Motions": {
+      "Idle": [
+        {
+          "File": "motions/smile.motion3.json"
+        },
+        {
+          "File": "motions/speak.motion3.json"
+        },
+        {
+          "File": "motions/standby.motion3.json"
+        }
+      ]
+    }
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": [
+        "ParamMouthOpenY"
+      ]
+    },
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ]
+    }
+  ],
+  "HitAreas": []
 }

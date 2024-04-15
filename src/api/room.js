@@ -37,3 +37,20 @@ export function getAllRooms(data, token) {
             })
     })
 }
+
+export function delRoom(data, token) {
+    const header = {
+        'Content-Type': 'application/json', // 设置请求头为 JSON 格式
+        'token': token,
+    }
+    return new Promise((resolve, reject) => {
+        axios
+            .post(url + "/delRoom", data, {headers: header})
+            .then(res => {
+                resolve(res)
+            })
+            .catch(err => {
+                reject(err)
+            })
+    })
+}

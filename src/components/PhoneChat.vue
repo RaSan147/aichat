@@ -4,15 +4,16 @@ import {onBeforeUnmount, onMounted, ref} from 'vue'
 import {register} from 'vue-advanced-chat'
 import '../css/iphone.css'
 import {post} from '@/api/user'
-import {addRoom, getAllRooms} from '@/api/room'
+import {addRoom, getAllRooms, delRoom} from '@/api/room'
 import {Snackbar} from "@varlet/ui";
 import {selectRoomHistoryChat, chat} from '@/api/chat'
-import {useStore} from 'vuex'
+import VueAdvancedChat from 'vue-advanced-chat'
 import store from "@/store";
+
 register()
 export default {
   components: {
-    Login
+    Login, VueAdvancedChat
   },
   data() {
     return {
@@ -21,10 +22,14 @@ export default {
       currentUserId: "1",
       rooms: [],
       messages: [],
-      pageNum: 1,
-      maxPageNum: null,
       roomNum: null,
-      isGenerationAudio: true
+      isGenerationAudio: true,
+      roomActions: [
+        {name: 'deleteRoom', title: 'Delete Room'}
+      ],
+      sending: false,
+      //消息请求
+      cancelFunc: null
     }
   },
   mounted() {
@@ -40,13 +45,9 @@ export default {
       this.loggedIn = response.data.data
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       if (response.data.data) {
-        const pageInfo = {
-          page: 1,
-          limit: 10
-        }
-        getAllRooms(pageInfo, token).then(response => {
+        getAllRooms(null, token).then(response => {
           if (response.data.code === 200) {
-            response.data.data.records.forEach((item, index) => {
+            response.data.data.forEach((item, index) => {
               this.rooms.push({
                 roomId: item.roomId,
                 roomName: item.firstChat,
@@ -82,16 +83,32 @@ export default {
 
   },
   methods: {
+    menuActionHandler(info) {
+      info = info.detail[0]
+      switch (info.action.name) {
+        case 'deleteRoom':
+          const data = {
+            roomId: info.roomId
+          }
+          delRoom(data, localStorage.getItem("token")).then(response => {
+            if (response.data.code === 200) {
+              this.rooms = this.rooms.filter(item => {
+                // 返回 roomId 不等于 info.roomId 的元素
+                return item.roomId !== info.roomId;
+              });
+            }
+          })
+      }
+    },
     handleLoginSuccess() {
       this.loggedIn = true;
       this.fetchRooms()
-    },
-    handleRoomChange(obj) {
     },
     addRoom() {
       addRoom(null, localStorage.getItem("token")).then(response => {
         if (response.data.code === 200) {
           this.createSnackbar("success", response.data.message);
+          this.fetchRooms();
         } else {
           this.createSnackbar("warning", response.data.error);
         }
@@ -106,14 +123,10 @@ export default {
       }
     },
 
-    getTotalPageNum(totalRecord, pageSize) {
-      let pageNum;
-      return pageNum = parseInt((totalRecord + pageSize - 1) / pageSize);
-    },
-
     sendMessage(message) {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const messages = this.messages;
+      this.sending = true;
       messages.push(
           {
             _id: message.detail[0].roomId,
@@ -139,41 +152,54 @@ export default {
         roomId: message.detail[0].roomId,
         isGenerationAudio: this.isGenerationAudio
       }
-      chat(chatData, localStorage.getItem("token"))
-          .then(response=>{
-            messages.push({
-              _id: message.detail[0].roomId,
-              content: response.data.data.dialogueAi,
-              senderId: "0",
-              username: "Nagisa",
-              avatar: 'nagisa.png',
-              timestamp: new Date().toString().substring(16, 21),
-              date: new Date().toDateString(),
-              system: false,
-              saved: true,
-              distributed: true,
-              seen: true,
-              deleted: false,
-              disableActions: false,
-              disableReactions: true,
-            })
-            store.commit("setAuditData", response.data.data.audioData);
+      const {promise, cancel} = chat(chatData, localStorage.getItem("token"));
+      this.cancelFunc = cancel;
+      promise.then(response => {
+        this.sending = false;
+        if (response.data.code === 200) {
+          messages.push({
+            _id: message.detail[0].roomId,
+            content: response.data.data.dialogueAi,
+            senderId: "0",
+            username: "Nagisa",
+            avatar: 'nagisa.png',
+            timestamp: new Date().toString().substring(16, 21),
+            date: new Date().toDateString(),
+            system: false,
+            saved: true,
+            distributed: true,
+            seen: true,
+            deleted: false,
+            disableActions: false,
+            disableReactions: true,
           })
+          this.rooms.forEach(item => {
+            if (item.roomId === message.detail[0].roomId) {
+              item.lastMessage.content = response.data.data.dialogueAi;
+            }
+          })
+          store.commit("setAuditData", response.data.data.audioData);
+        } else {
+          this.sending = false;
+          this.cancelFunc = null
+          this.createSnackbar("warning", "对话失败！")
+        }
+      }).catch(error => {
+        this.createSnackbar("danger", error)
+        this.cancelFunc = null
+        this.sending = false;
+      })
       this.messages = messages;
     },
     fetchRooms() {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"))
-      const pageInfo = {
-        page: 1,
-        limit: 10
-      };
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
-      getAllRooms(pageInfo, token).then(response => {
+      getAllRooms(null, token).then(response => {
         if (response.data.code === 200) {
           this.rooms = []; // 清空原有的房间列表
-          response.data.data.records.forEach((item, index) => {
+          response.data.data.forEach((item, index) => {
             this.rooms.push({
               roomId: item.roomId,
               roomName: item.firstChat,
@@ -206,6 +232,11 @@ export default {
       });
     },
     fetchMessages(obj) {
+      if (this.cancelFunc) {
+        this.cancelFunc()
+        this.cancelFunc = null // 将 cancelFunc 重置为 null
+      }
+      this.sending = false;
       this.messagesLoaded = false;
       const room = obj.detail[0].room;
       this.messages = []; // 清空当前房间的消息列表
@@ -217,11 +248,11 @@ export default {
       const userInfo = JSON.parse(localStorage.getItem("userInfo"))
       const data = {
         roomId: room.roomId,
-        type:0
+        type: 0
       }
       selectRoomHistoryChat(data, localStorage.getItem("token")).then(response => {
-        this.maxPageNum = this.getTotalPageNum(response.data.data.total, response.data.data.size);
         const list = response.data.data.reverse();
+        const messages = [];
         list.forEach((item, index) => {
           // 使用 chatDate 和 chatTimestamp 创建 Date 对象
           const myDateObject = new Date(item[1].chatDate[0], item[1].chatDate[1] - 1, item[1].chatDate[2],
@@ -236,7 +267,7 @@ export default {
           // 将 Date 对象转换为 date 字符串（完整日期格式）
           const myDate = myDateObject.toDateString();
           const aiDate = aiDateObject.toDateString();
-          const messages = this.messages;
+
           messages.push(
               {
                 _id: room.roomId,
@@ -271,8 +302,8 @@ export default {
                 disableReactions: true,
               }
           )
-          this.messages = messages;
         })
+        this.messages = messages;
         this.messagesLoaded = true;
       })
 
@@ -372,10 +403,12 @@ export default {
             @send-message="sendMessage"
             @add-room="addRoom"
             :emojis-suggestion-enabled=false
+            :room-actions="JSON.stringify(roomActions)"
+            @room-action-handler="menuActionHandler"
             v-if="loggedIn"
         >
           <div slot="room-header-info" class="chat-header">
-            <p>Nagisa</p>
+            <p>{{ this.sending ? "对方正在输入..." : "Nagisa" }}</p>
           </div>
         </vue-advanced-chat>
       </div>
@@ -434,10 +467,11 @@ export default {
                 @add-room="addRoom"
                 :emojis-suggestion-enabled=false
                 v-if="loggedIn"
+                :room-actions="JSON.stringify(roomActions)"
+                @room-action-handler="menuActionHandler"
             >
               <div slot="room-header-info" class="chat-header">
-
-                <p>Nagisa</p>
+                <p>{{ this.sending ? "对方正在输入..." : "Nagisa" }}</p>
               </div>
             </vue-advanced-chat>
           </div>

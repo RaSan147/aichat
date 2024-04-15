@@ -8,7 +8,6 @@
 
 
 import {onMounted, ref, watch} from "vue";
-import {useStore} from "vuex";
 import store from "@/store";
 export default {
   name: "Live2d",
@@ -16,13 +15,10 @@ export default {
     const model = ref(null);
     const canvasWidth = ref(0);
     const canvasHeight = ref(0);
-
-    const category_name = "speak" // name of the motion category
-    const animation_index = 0 // index of animation under that motion category
-    const priority_number = 3
-    const volume = 0.9; // [Optional arg, can be null or empty] [0.0 - 1.0]
-    const expression = 3; // [Optional arg, can be null or empty] [index|name of expression]
-    const resetExpression = true; // [Optional arg, can be null or empty] [true|false] [default: true] [if true, expression will be reset to default after animation is over]
+    var volume = 1; //[Optional arg, can be null or empty] [0.0 - 1.0]
+    var expression = 3; //[Optional arg, can be null or empty] [index|name of expression]
+    var resetExpression = true; //[Optional arg, can be null or empty] [true|false] [default: true] [if true, expression will be reset to default after animation is over]
+    var cors = "Anonymous" //[Optional arg, can be null or empty] [default: "Anonymous"] [if you want to use cors, set it to "use-cors"]
 //
 //
     // 定义一个加载 Live2D 模型的函数
@@ -37,14 +33,11 @@ export default {
         resizeTo: document.getElementById("canvas"),
         transparent: true
       });
-
       // 将 Live2D 模型添加到 PIXI 应用程序的舞台上
       app.stage.addChild(live2dModel);
       // 将加载后的 Live2D 模型保存到 ref 中
       model.value = live2dModel;
-      // 设置 Live2D 模型的属性
       updateCanvasSize();
-      modelLoadedCallback();
     }
 
     watch(()=> store.getters.getAuditData, (newValue, oldValue) => {
@@ -54,18 +47,10 @@ export default {
     // 在组件挂载时执行加载 Live2D 模型的函数
     onMounted(() => {
       loadLive2DModel();
-      // setInterval(randomEvent,1000);
     });
-
-//    // 定义模型加载完成后的回调函数
-    function modelLoadedCallback() {
-
-      // audio.play();
-    }
 
 
     function randomEvent() {
-
       const byteCharacters = atob(store.getters.getAuditData);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -75,15 +60,23 @@ export default {
       const blob = new Blob([byteArray], { type: 'audio/wav' });
       // 创建 Blob 对象的 URL
       const audioUrl = URL.createObjectURL(blob);
-      console.log(audioUrl)
       // 在这里编写你想要触发的随机事件的代码
       // model.value.motion("Idle", animation_index, priority_number, {sound: audioUrl, volume: volume, expression:expression, resetExpression:resetExpression})
-      model.value.speak(audioUrl)
-      const audio = new Audio(audioUrl);
-      audio.addEventListener('ended', () => {
-        URL.revokeObjectURL(audioUrl);
+      model.value.speak(audioUrl, {
+        volume: volume,
+        expression: expression,
+        resetExpression: resetExpression,
+        crossOrigin: cors,
+      })
+      const audio = new Audio();
+      audio.src = audioUrl;
+      audio.addEventListener('loadedmetadata', function() {
+        const duration = audio.duration * 1000; // 将时长转换为毫秒
+        // 在音频播放时长之后执行清除操作
+        setTimeout(() => {
+          URL.revokeObjectURL(audioUrl);
+        }, duration);
       });
-      audio.play()
     }
 
     // 返回响应式数据和方法

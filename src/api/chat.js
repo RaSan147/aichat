@@ -10,6 +10,7 @@ export function selectRoomHistoryChat(data, token) {
         'token': token,
     }
     return new Promise((resolve, reject) => {
+
         axios
             .post(url + "/selectRoomHistoryChat", data, {headers: header})
             .then(res => {
@@ -24,9 +25,17 @@ export function selectRoomHistoryChat(data, token) {
 export function chat(data, token) {
     const header = {
         'Content-Type': 'application/json',
-        'token': token
+        'token': token,
+        'routeKey': "123456"
     }
-    return new Promise((resolve, reject) => {
+    let cancel // 取消请求的方法
+
+
+    const promise = new Promise((resolve, reject) => {
+        const source = axios.CancelToken.source()
+
+        // 将取消请求的方法赋值给 cancel
+        cancel = source.cancel
         axios.post(url + "/toChat", data, {headers: header})
             .then(res => {
                 resolve(res)
@@ -35,4 +44,9 @@ export function chat(data, token) {
                 reject(err)
             })
     })
+
+    return {
+        promise,
+        cancel
+    }
 }

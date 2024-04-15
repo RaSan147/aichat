@@ -45,7 +45,6 @@ export default {
 
     function createSnackbar(type,msg,tele) {
       Snackbar[type](msg,{teleport: tele})
-      console.log(teleportTarget.value)
       if (type === 'loading') {
         setTimeout(() => {
           Snackbar.success("加载成功")
